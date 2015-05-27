@@ -221,6 +221,11 @@ module.exports.routes = {
   'post /changePassword': {
     controller: 'UserController',
     action: 'changePassword'
+  },
+
+  'get /ruleSet/import': {
+    controller: 'RuleSetController',
+    action: 'import'
   }
   
 };
