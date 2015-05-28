@@ -1,24 +1,24 @@
-var waterfall = require('async-waterfall'); 
-var fs = require('fs'); 
+var waterfall = require('async-waterfall'), fs = require('fs'), path = require('path');
+/**
+* Service methods for importing and exporting mathmaps from the speech-rule-engine.
+*/ 
 module.exports = {
 
-    importMathMap: function(mathMap) {
-        var pathToLib = "node_modules/MathJax-node/node_modules/speech-rule-engine/lib/";
-        var pathToSubdir = pathToLib + mathMap;
-        var files = fs.readdirSync(pathToSubdir);
+    importMathMap: function(pathToMathMap, mathMap) {
+        var files = fs.readdirSync(pathToMathMap);
         for (var f = 0; f < files.length; f++) {
-            RuleSetImportService.importMathMapCategory(mathMap, files[f], pathToSubdir);
+            RuleSetImportExportService.importMathMapCategory(mathMap, files[f], pathToMathMap);
         }
     },
 
-    importMathMapCategory: function(mathMap, mathMapCategory, pathToSubdir) {
+    importMathMapCategory: function(mathMap, mathMapCategory, pathToMathMap) {
         //First find or create the category.
         var category = mathMapCategory.substr(0, mathMapCategory.indexOf('.')); 
         MathMapCategory.findOrCreate({mathMap: mathMap, category: category}).then(function(dbMathMapCategory) {
-            var mathTypeRules = JSON.parse(fs.readFileSync(pathToSubdir + "/" + mathMapCategory, 'utf8'));
+            var mathTypeRules = JSON.parse(fs.readFileSync(pathToMathMap + "/" + mathMapCategory, 'utf8'));
             for (var i = 0; i < mathTypeRules.length; i++) {
                 var rule = mathTypeRules[i];
-                RuleSetImportService.importRule(mathMap, dbMathMapCategory, rule);
+                RuleSetImportExportService.importRule(mathMap, dbMathMapCategory, rule);
             }
         }).catch(function(err) {
             console.log(err);
@@ -35,7 +35,7 @@ module.exports = {
             mathMapCategory: mathMapCategory
         }).then(function(dbRule) {
             //Create Mappings.
-            RuleSetImportService.importRulesets(dbRule, rule.mappings);
+            RuleSetImportExportService.importRulesets(dbRule, rule.mappings);
         }).catch(function(err) {
             console.log(err);
         });
@@ -47,7 +47,7 @@ module.exports = {
             var name = rulesets[r];
             RuleSet.findOrCreate({name: name, status: "Live", permission: "Public"}).then(function(ruleset) {
                 //Create Mappings.
-                RuleSetImportService.importMappings(rule, ruleset, mappings[name]);
+                RuleSetImportExportService.importMappings(rule, ruleset, mappings[name]);
             }).catch(function(err) {
                 console.log(err);
             });
@@ -72,6 +72,16 @@ module.exports = {
                 console.log(err);
             });   
         }
+    },
+
+    getMathMapDirectories: function(pathToMathMaps) {
+        return fs.readdirSync(pathToMathMaps).filter(function(file) {
+            return fs.statSync(path.join(pathToMathMaps, file)).isDirectory();
+        });
+    },
+
+    exportMathMaps: function() {
+        
     }
 
 };

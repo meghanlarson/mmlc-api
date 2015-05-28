@@ -9,9 +9,7 @@ module.exports = {
 
   attributes: {
     mathMap: {
-        type: 'string',
-        required: true,
-        enum: ['functions', 'units', 'symbols']
+        model: 'MathMap'
     },
     category: {
         type: 'string'
