@@ -8,13 +8,16 @@ var waterfall = require('async');
 var pathToMathMaps = "node_modules/MathJax-node/node_modules/speech-rule-engine/lib/";
 module.exports = {
 
+    create: function(req, res) {
+
+    },
+
     /** Read json rulesets from the speech-rule-engine and import as default rulesets. */
     import: function(req, res) {
-        var mathmaps = RuleSetImportExportService.getMathMapDirectories(pathToMathMaps);
-        console.log(mathmaps);
+        var mathmaps = RuleSetImportExporter.getMathMapDirectories(pathToMathMaps);
         for (var m = 0; m < mathmaps.length; m++) {
             MathMap.findOrCreate({name: mathmaps[m]}).then(function(mathmap) {
-                RuleSetImportExportService.importMathMap(pathToMathMaps + mathmap.name, mathmap);
+                RuleSetImportExporter.importMathMap(pathToMathMaps + mathmap.name, mathmap);
             });
         }
         return res.json("Importing...");
@@ -39,7 +42,7 @@ module.exports = {
     },
 
     export: function(req, res) {
-        RuleSetImportExportService.exportMathMaps(pathToMathMaps);
+        RuleSetImportExporter.exportMathMaps(pathToMathMaps);
         return res.json("Exporting...");
     }
 };

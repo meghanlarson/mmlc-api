@@ -1,13 +1,13 @@
 var waterfall = require('async-waterfall'), fs = require('fs'), path = require('path');
 /**
-* Service methods for importing and exporting mathmaps from the speech-rule-engine.
+* Import and export mathmaps from the speech-rule-engine.
 */ 
 module.exports = {
 
     importMathMap: function(pathToMathMap, mathMap) {
         var files = fs.readdirSync(pathToMathMap);
         for (var f = 0; f < files.length; f++) {
-            RuleSetImportExportService.importMathMapCategory(mathMap, files[f], pathToMathMap);
+            RuleSetImportExporter.importMathMapCategory(mathMap, files[f], pathToMathMap);
         }
     },
 
@@ -18,7 +18,7 @@ module.exports = {
             var mathTypeRules = JSON.parse(fs.readFileSync(pathToMathMap + "/" + mathMapCategory, 'utf8'));
             for (var i = 0; i < mathTypeRules.length; i++) {
                 var rule = mathTypeRules[i];
-                RuleSetImportExportService.importRule(mathMap, dbMathMapCategory, rule);
+                RuleSetImportExporter.importRule(mathMap, dbMathMapCategory, rule);
             }
         }).catch(function(err) {
             console.log(err);
@@ -35,7 +35,7 @@ module.exports = {
             mathMapCategory: mathMapCategory
         }).then(function(dbRule) {
             //Create Mappings.
-            RuleSetImportExportService.importRulesets(dbRule, rule.mappings);
+            RuleSetImportExporter.importRulesets(dbRule, rule.mappings);
         }).catch(function(err) {
             console.log(err);
         });
@@ -45,10 +45,8 @@ module.exports = {
         var rulesets = Object.keys(mappings);
         async.each(rulesets, function(name, callback) {
             RuleSet.findOrCreate({name: name, status: "Live", permission: "Public"}).then(function(ruleset) {
-                console.log(ruleset.name);
-                console.log(mappings);
                 //Create Mappings.
-                RuleSetImportExportService.importMappings(rule, ruleset, mappings[ruleset.name]);
+                RuleSetImportExporter.importMappings(rule, ruleset, mappings[ruleset.name]);
                 return callback();
             }).catch(function(err) {
                 console.log(err);
@@ -92,7 +90,7 @@ module.exports = {
         MathMap.find().populate("mathMapCategories").then(function(mathMaps) {
             mathMaps.forEach(function(mathMap) {
                 mathMap.mathMapCategories.forEach(function(mathMapCategory) {
-                    RuleSetImportExportService.exportMathMapCategory(pathToMathMaps, mathMap, mathMapCategory);
+                    RuleSetImportExporter.exportMathMapCategory(pathToMathMaps, mathMap, mathMapCategory);
                 });
             });
         });
@@ -101,14 +99,14 @@ module.exports = {
     exportMathMapCategory: function(pathToMathMaps, mathMap, mathMapCategory) {
         //Load up the rules and export to the file. 
         Rule.find({mathMapCategory: mathMapCategory.id}).then(function(rules) {
-            RuleSetImportExportService.writeMathMapCategory(pathToMathMaps, mathMap, mathMapCategory, rules);
+            RuleSetImportExporter.writeMathMapCategory(pathToMathMaps, mathMap, mathMapCategory, rules);
         });
     },
 
     writeMathMapCategory: function(pathToMathMaps, mathMap, mathMapCategory, rules) {
         var exportJson = [];
         async.map(rules, function(rule, callback) {
-            RuleSetImportExportService.buildRule(rule, function(exportRule) {
+            RuleSetImportExporter.buildRule(rule, function(exportRule) {
                 return callback(null, exportRule);
             });
         }, function(err, results) {
