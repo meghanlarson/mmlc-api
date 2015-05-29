@@ -5,16 +5,16 @@
  * @help        :: See http://links.sailsjs.org/docs/controllers
  */
 var waterfall = require('async');
+var pathToMathMaps = "node_modules/MathJax-node/node_modules/speech-rule-engine/lib/";
 module.exports = {
 
     /** Read json rulesets from the speech-rule-engine and import as default rulesets. */
     import: function(req, res) {
-        var pathToMathMaps = "node_modules/MathJax-node/node_modules/speech-rule-engine/lib/";
         var mathmaps = RuleSetImportExportService.getMathMapDirectories(pathToMathMaps);
         console.log(mathmaps);
         for (var m = 0; m < mathmaps.length; m++) {
             MathMap.findOrCreate({name: mathmaps[m]}).then(function(mathmap) {
-                RuleSetImportService.importMathMap(pathToMathMaps + mathmap.name, mathmap);
+                RuleSetImportExportService.importMathMap(pathToMathMaps + mathmap.name, mathmap);
             });
         }
         return res.json("Importing...");
@@ -36,6 +36,11 @@ module.exports = {
         }).catch(function(err) {
             return res.badRequest(err);
         });
+    },
+
+    export: function(req, res) {
+        RuleSetImportExportService.exportMathMaps(pathToMathMaps);
+        return res.json("Exporting...");
     }
 };
 

@@ -226,6 +226,16 @@ module.exports.routes = {
   'get /ruleSet/import': {
     controller: 'RuleSetController',
     action: 'import'
+  },
+
+  'get /ruleSet/previewExport': {
+    controller: 'RuleSetController',
+    action: 'previewExport'
+  },
+
+  'get /ruleSet/export': {
+    controller: 'RuleSetController',
+    action: 'export'
   }
   
 };

@@ -43,35 +43,42 @@ module.exports = {
 
     importRulesets: function(rule, mappings) {
         var rulesets = Object.keys(mappings);
-        for (var r = 0; r < rulesets.length; r++) {
-            var name = rulesets[r];
+        async.each(rulesets, function(name, callback) {
             RuleSet.findOrCreate({name: name, status: "Live", permission: "Public"}).then(function(ruleset) {
+                console.log(ruleset.name);
+                console.log(mappings);
                 //Create Mappings.
-                RuleSetImportExportService.importMappings(rule, ruleset, mappings[name]);
+                RuleSetImportExportService.importMappings(rule, ruleset, mappings[ruleset.name]);
+                return callback();
             }).catch(function(err) {
                 console.log(err);
             });
-        }
+        }, function(err) {
+            if (err) console.log(err);
+        });
     },
 
     importMappings: function(rule, ruleset, mappings) {
         var styles = Object.keys(mappings);
         //Create the mappings and attach to the rule.
-        for (var s = 0; s < styles.length; s++) {
-            var style = styles[s];
+        async.each(styles, function(style, callback) {
             Mapping.findOrCreate({
                 rule: rule, 
                 ruleSet: ruleset, 
                 style: style
             }).then(function(mapping) {
                 //Update the style.
-                Mapping.update({id: mapping.id, speak: mappings[style]}).catch(function(err) {
+                Mapping.update({id: mapping.id}, {speak: mappings[mapping.style]}).then(function(updated) {
+                    return callback();
+                }).catch(function(err) {
                     console.log(err);
                 });
             }).catch(function(err) {
                 console.log(err);
-            });   
-        }
+            });  
+        }, function(err) {
+            if (err) console.log(err);
+        });
     },
 
     getMathMapDirectories: function(pathToMathMaps) {
@@ -80,8 +87,60 @@ module.exports = {
         });
     },
 
-    exportMathMaps: function() {
-        
+    exportMathMaps: function(pathToMathMaps) {
+        //Load up all the mathmaps.
+        MathMap.find().populate("mathMapCategories").then(function(mathMaps) {
+            mathMaps.forEach(function(mathMap) {
+                mathMap.mathMapCategories.forEach(function(mathMapCategory) {
+                    RuleSetImportExportService.exportMathMapCategory(pathToMathMaps, mathMap, mathMapCategory);
+                });
+            });
+        });
+    },
+
+    exportMathMapCategory: function(pathToMathMaps, mathMap, mathMapCategory) {
+        //Load up the rules and export to the file. 
+        Rule.find({mathMapCategory: mathMapCategory.id}).then(function(rules) {
+            RuleSetImportExportService.writeMathMapCategory(pathToMathMaps, mathMap, mathMapCategory, rules);
+        });
+    },
+
+    writeMathMapCategory: function(pathToMathMaps, mathMap, mathMapCategory, rules) {
+        var exportJson = [];
+        async.map(rules, function(rule, callback) {
+            RuleSetImportExportService.buildRule(rule, function(exportRule) {
+                return callback(null, exportRule);
+            });
+        }, function(err, results) {
+            if (err) console.log(err);
+            var forFile = JSON.stringify(results, null, 4); 
+            fs.writeFile(pathToMathMaps + mathMap.name + "/" + mathMapCategory.category + ".json", forFile, function (err) {
+              if (err) throw err;
+              console.log('It\'s saved!');
+            });
+        });
+    },
+
+    buildRule: function(rule, done) {
+        //Load up mappings.
+        var exportRule = {
+            "category": rule.category,
+            "key": rule.key
+        };
+        if (rule.names != null) {
+            exportRule.names = rule.names;
+        }
+        Mapping.find({rule: rule.id}).populate("ruleSet").then(function(mappings) {
+            exportRule.mappings = {};
+            async.each(mappings, function(mapping, callback) {
+                if (typeof(exportRule.mappings[mapping.ruleSet.name]) === "undefined") exportRule.mappings[mapping.ruleSet.name] = {};
+                exportRule.mappings[mapping.ruleSet.name][mapping.style] = mapping.speak;
+                return callback();
+            }, function(err) {
+                if (err) console.log(err);
+                return done(exportRule);
+            });
+        });
     }
 
 };
